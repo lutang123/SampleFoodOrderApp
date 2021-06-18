@@ -281,7 +281,7 @@ class _ProductPageState extends State<ProductPage> {
               children: [
                 const Spacer(),
                 Text(
-                  'Product.add_to_cart'.toUpperCase(),
+                  'Add to Chart'.toUpperCase(),
                   style: const TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 const Spacer(),
