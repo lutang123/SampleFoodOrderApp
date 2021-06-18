@@ -29,49 +29,7 @@ class ModificationListTile extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          color: kLightGrey,
-          child: Padding(
-            padding:
-                const EdgeInsets.only(left: kPadding20, top: 8.0, bottom: 8.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                modificationGroup.required
-                    ? Text(modificationGroup.name, style: kHeaderTextStyle)
-                    : Text('${modificationGroup.name} (add-on)',
-                        style: kHeaderTextStyle),
-                modificationGroup.required
-                    ? modificationGroup.maximum == null
-                        ? const Padding(
-                            padding: EdgeInsets.only(top: 8.0, left: 3),
-                            child: Text('Choose as many as you would like',
-                                style: kGrayStyle14),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(top: 8.0, left: 3),
-                            child: Text(
-                                'Choose up to ${modificationGroup.maximum}',
-                                style: kGrayStyle14),
-                          )
-                    //mini is null
-                    : modificationGroup.maximum == null
-                        ? const Padding(
-                            padding: EdgeInsets.only(top: 8.0, left: 3),
-                            child: Text('Choose as many as you would like',
-                                style: kGrayStyle14),
-                          )
-                        : Padding(
-                            padding: const EdgeInsets.only(top: 8.0, left: 3),
-                            child: Text(
-                                'Choose up to ${modificationGroup.maximum}',
-                                style: kGrayStyle14),
-                          ),
-              ],
-            ),
-          ),
-        ),
+        buildTitle(),
         ...modificationGroup.modifications.map((modification) {
           return Column(
             children: [
@@ -105,6 +63,49 @@ class ModificationListTile extends StatelessWidget {
           );
         }).toList(),
       ],
+    );
+  }
+
+  Container buildTitle() {
+    return Container(
+      color: kLightGrey,
+      child: Padding(
+        padding: const EdgeInsets.only(left: kPadding20, top: 8.0, bottom: 8.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            modificationGroup.required
+                ? Text(modificationGroup.name, style: kHeaderTextStyle)
+                : Text('${modificationGroup.name} (add-on)',
+                    style: kHeaderTextStyle),
+            modificationGroup.required
+                ? modificationGroup.maximum == null
+                    ? const Padding(
+                        padding: EdgeInsets.only(top: 8.0, left: 3),
+                        child: Text('Choose as many as you would like',
+                            style: kGrayStyle14),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 8.0, left: 3),
+                        child: Text('Choose up to ${modificationGroup.maximum}',
+                            style: kGrayStyle14),
+                      )
+                //mini is null
+                : modificationGroup.maximum == null
+                    ? const Padding(
+                        padding: EdgeInsets.only(top: 8.0, left: 3),
+                        child: Text('Choose as many as you would like',
+                            style: kGrayStyle14),
+                      )
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 8.0, left: 3),
+                        child: Text('Choose up to ${modificationGroup.maximum}',
+                            style: kGrayStyle14),
+                      ),
+          ],
+        ),
+      ),
     );
   }
 }
