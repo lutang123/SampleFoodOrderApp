@@ -8,6 +8,7 @@ import 'package:sample_food_order_app/core/models/product/variant.dart';
 import 'package:sample_food_order_app/ui/product_component/constant.dart';
 import 'package:sample_food_order_app/ui/product_component/modification_list_tile.dart';
 import 'package:sample_food_order_app/ui/product_component/quantity_row.dart';
+import 'package:sample_food_order_app/ui/product_component/show_alert_dialog.dart';
 import 'package:sample_food_order_app/ui/product_component/variants_list_tile.dart';
 
 class ProductPage extends StatefulWidget {
@@ -139,6 +140,10 @@ class _ProductPageState extends State<ProductPage> {
           modificationPrice = _modificationQuantity * modification.price;
           getDisplayedPrice();
         });
+      } else {
+        showAlertDialog(context,
+            title: 'Error',
+            content: Text('You can choose maximum of $maxQuantity items'));
       }
     }
     print('_modificationQuantity: $_modificationQuantity');
