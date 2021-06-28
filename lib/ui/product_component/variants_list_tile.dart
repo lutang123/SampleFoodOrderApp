@@ -44,12 +44,13 @@ class VariantListTile extends StatelessWidget {
   const VariantListTile({
     Key? key,
     required this.variant,
+    required this.selectedVariantId,
     required this.onChanged,
-    required this.groupValue,
   }) : super(key: key);
+
   final Variant variant;
-  final void Function(Object?) onChanged;
-  final dynamic groupValue;
+  final int? selectedVariantId;
+  final void Function(int) onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -61,11 +62,11 @@ class VariantListTile extends StatelessWidget {
               horizontal: kPadding20 * 2, vertical: 10),
           leading: Text(variant.name, style: kProductVariant),
           trailing: Radio(
-            value: variant,
-            groupValue: groupValue,
+            value: variant.id,
+            groupValue: selectedVariantId,
             activeColor: kPrimaryColor,
-            onChanged: (Object? value) {
-              onChanged(value);
+            onChanged: (Object? id) {
+              onChanged(id as int);
             },
           ),
         ),

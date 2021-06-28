@@ -1,6 +1,6 @@
 import 'package:sample_food_order_app/core/models/product/product.dart';
 
-Product getProductFromTest() {
+Future<Product> getProductFromTest() {
   const String product = """
   {
    "id":13,
@@ -187,5 +187,5 @@ Product getProductFromTest() {
    ]
 }""";
 
-  return Product.fromJson(product);
+  return Future.value(Product.fromJson(product));
 }

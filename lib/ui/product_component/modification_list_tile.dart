@@ -1,27 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:sample_food_order_app/core/constants.dart';
-import 'package:sample_food_order_app/core/models/product/modification.dart';
+import 'package:sample_food_order_app/core/models/order/order_modification.dart';
 import 'package:sample_food_order_app/core/models/product/modification_group.dart';
+import 'package:sample_food_order_app/core/services/format.dart';
 import 'package:sample_food_order_app/ui/product_component/quantity_row.dart';
+
 import 'constant.dart';
 
 class ModificationListTile extends StatelessWidget {
   const ModificationListTile({
-    Key? key,
     required this.modificationGroup,
-    required this.onChangedModification,
-    required this.modificationQuantity,
-    required this.onPressedPlusModification,
-    required this.onPressedMinusModification,
-  }) : super(key: key);
-  final ModificationGroup modificationGroup;
-  final void Function(bool?, Modification modification, int? maxQuantity)
-      onChangedModification;
+    required this.getQuantityInOrder,
+    required this.onAddModification,
+    required this.onRemoveModification,
+    required this.onRemoveAllModifications,
+  });
 
-  final int modificationQuantity;
-  final Function(Modification modification, int? maxQuantity)
-      onPressedPlusModification;
-  final Function(Modification modification) onPressedMinusModification;
+  final ModificationGroup modificationGroup;
+  final void Function(OrderModification) onAddModification;
+  final void Function(OrderModification) onRemoveModification;
+  final void Function(OrderModification) onRemoveAllModifications;
+  final int Function(OrderModification) getQuantityInOrder;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +30,11 @@ class ModificationListTile extends StatelessWidget {
       children: [
         buildTitle(),
         ...modificationGroup.modifications.map((modification) {
+          final orderModification = OrderModification(
+              groupId: modificationGroup.id, modificationId: modification.id);
+
+          final modificationQuantity = getQuantityInOrder(orderModification);
+
           return Column(
             children: [
               ListTile(
@@ -40,22 +44,28 @@ class ModificationListTile extends StatelessWidget {
                 leading: modification.price == 0
                     ? Text(modification.name, style: kProductVariant)
                     : Text(
-                        '${modification.name} - add \$${modification.price / 100}',
+                        '${modification.name} - add ${currency(modification.price)}',
                         style: kProductVariant),
-                title: modification.isSelected && modification.allowQuantity
+                title: modificationQuantity > 0 && modification.allowQuantity
                     ? ModificationQuantityRow(
                         quantity: modificationQuantity,
-                        onPressedPlus: () => onPressedPlusModification(
-                            modification, modificationGroup.maximum),
+                        onPressedPlus: () =>
+                            onAddModification(orderModification),
                         onPressedMinus: () =>
-                            onPressedMinusModification(modification),
+                            onRemoveModification(orderModification),
                       )
                     : const SizedBox(),
                 trailing: Checkbox(
-                  value: modification.isSelected,
+                  value: modificationQuantity > 0,
                   activeColor: kPrimaryColor,
-                  onChanged: (value) => onChangedModification(
-                      value, modification, modificationGroup.maximum),
+                  onChanged: (value) {
+                    final isChecked = value ?? false;
+                    if (isChecked && modificationQuantity == 0) {
+                      onAddModification(orderModification);
+                    } else if (!isChecked) {
+                      onRemoveAllModifications(orderModification);
+                    }
+                  },
                 ),
               ),
               const Divider(height: 1),

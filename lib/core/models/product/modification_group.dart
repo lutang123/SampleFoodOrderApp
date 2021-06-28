@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 import 'modification.dart';
 
 class ModificationGroup {
@@ -41,5 +43,16 @@ class ModificationGroup {
       maximum: json["maximum"] != null ? json["maximum"] as int : null,
       modifications: _modifications as List<Modification>,
     );
+  }
+
+  int getModificationPrice(int modificationId) {
+    final modification =
+        modifications.firstWhereOrNull((m) => m.id == modificationId);
+    if (modification == null) {
+      print("Error: modification $modificationId not found in group $id");
+      return 0;
+    }
+
+    return modification.price;
   }
 }

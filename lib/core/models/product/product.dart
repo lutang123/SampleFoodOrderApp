@@ -1,24 +1,29 @@
 import 'dart:convert';
+
+import 'package:collection/collection.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sample_food_order_app/core/models/order/order_modification.dart';
+
 import './modification_group.dart';
 import './variant.dart';
 
+@immutable
 class Product {
-  int id; //6116
-  String name;
-  String? description;
-  String? featuredImage; //null
-  List<ModificationGroup>? modificationGroups; //[]
-  List<Variant> variants;
+  final int id; //6116
+  final String name;
+  final String? description;
+  final String? featuredImage; //null
+  final List<ModificationGroup> modificationGroups; //[]
+  final List<Variant> variants;
 
   Product({
     required this.id,
     required this.name,
     this.description,
     this.featuredImage,
-    this.modificationGroups,
+    List<ModificationGroup>? modificationGroups,
     required this.variants,
-  });
+  }) : this.modificationGroups = modificationGroups ?? [];
 
   factory Product.fromJson(String str) =>
       Product.fromMap(json.decode(str) as Map<String, dynamic>);
@@ -95,5 +100,33 @@ class Product {
       modificationGroups: modificationGroups ?? this.modificationGroups,
       variants: variants ?? this.variants,
     );
+  }
+
+  int getPrice(int variantId) {
+    final variant =
+        variants.firstWhereOrNull((variant) => variant.id == variantId);
+
+    if (variant == null) {
+      print("Error: Variant id $variantId was not found!");
+      return 0;
+    }
+
+    return variant.price;
+  }
+
+  ModificationGroup? findModificationGroup(int groupId) {
+    return modificationGroups.firstWhereOrNull((g) => g.id == groupId);
+  }
+
+  int getModificationPrice(OrderModification modification) {
+    final modificationGroup = findModificationGroup(modification.groupId);
+
+    if (modificationGroup == null) {
+      print(
+          "Error: modification group ${modification.groupId} not found in product $id");
+      return 0;
+    }
+
+    return modificationGroup.getModificationPrice(modification.modificationId);
   }
 }

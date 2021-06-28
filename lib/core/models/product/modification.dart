@@ -7,7 +7,6 @@ class Modification {
     this.allowQuantity = false,
     required this.variant,
     required this.modificationGroup,
-    this.isSelected = false,
   });
 
   int id;
@@ -17,7 +16,6 @@ class Modification {
   bool allowQuantity;
   int variant;
   int modificationGroup;
-  bool isSelected;
 
   factory Modification.fromJson(dynamic json) {
     int variant;

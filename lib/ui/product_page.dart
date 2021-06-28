@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:sample_food_order_app/core/constants.dart';
 import 'package:sample_food_order_app/core/api_service/product_testfile.dart';
-import 'package:sample_food_order_app/core/models/product/modification.dart';
+import 'package:sample_food_order_app/core/constants.dart';
+import 'package:sample_food_order_app/core/models/order/order.dart';
+import 'package:sample_food_order_app/core/models/order/order_modification.dart';
+import 'package:sample_food_order_app/core/models/order/order_product.dart';
 import 'package:sample_food_order_app/core/models/product/modification_group.dart';
 import 'package:sample_food_order_app/core/models/product/product.dart';
-import 'package:sample_food_order_app/core/models/product/variant.dart';
+import 'package:sample_food_order_app/core/services/format.dart';
+import 'package:sample_food_order_app/core/services/price_calculator.dart';
 import 'package:sample_food_order_app/ui/product_component/constant.dart';
 import 'package:sample_food_order_app/ui/product_component/modification_list_tile.dart';
 import 'package:sample_food_order_app/ui/product_component/quantity_row.dart';
@@ -19,230 +24,195 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
-  late Product product;
-  Variant? _selectedVariant;
-  List<ModificationGroup>? modifications;
-
-  bool _isLoading = true;
-  bool _hasError = false;
-
-  int variantPrice = 0;
-  int modificationPrice = 0;
-  int totalPrice = 0;
-  double displayedPrice = 0.0;
+  late Future<Product> productFromNetwork;
+  final _orderController = StreamController<Order>();
 
   @override
   void initState() {
     super.initState();
-    getProductFromAPI();
-  }
 
-  Future<void> getProductFromAPI() async {
-    product = getProductFromTest();
-    _getSelectedVariant(product);
-    _sortModificationGroup(product);
-    setState(() {
-      _isLoading = false;
+    _orderController.add(Order.initial());
+    productFromNetwork = getProductFromTest();
+
+    productFromNetwork.then((product) {
+      assert(product.variants.isNotEmpty);
+      final orderProduct = OrderProduct(
+          productId: product.id, variantId: product.variants.first.id);
+      _orderController.add(Order.forProduct(orderProduct));
     });
+
+    setState(() {});
   }
 
-  void _getSelectedVariant(Product product) {
-    if (product.variants.isNotEmpty) {
-      setState(() {
-        _selectedVariant = product.variants[0];
-        variantPrice = _selectedVariant!.price;
-        getDisplayedPrice();
-      });
-    }
+  @override
+  void dispose() {
+    _orderController.close();
+    super.dispose();
   }
 
-  void _sortModificationGroup(Product product) {
-    modifications = product.modificationGroups;
-    if (modifications != null) {
-      modifications!
-          .sort((lhs, rhs) => (lhs.required.toString().length) //true 4
-                  .compareTo(rhs.required.toString().length) //false 5 )
-              );
-    }
+  List<ModificationGroup> _sortedModificationGroup(Product product) {
+    return List.from(product.modificationGroups)
+      ..sort((lhs, rhs) => (lhs.required.toString().length) //true 4
+              .compareTo(rhs.required.toString().length) //false 5 )
+          );
   }
 
   void addToCart() => Navigator.of(context).pop();
 
-  void getDisplayedPrice() {
-    totalPrice = variantPrice * _variantQuantity + modificationPrice;
-    displayedPrice = totalPrice / 100;
+  void _onChangedVariant(Order order, int variantId) {
+    final updatedOrder = order.setVariant(variantId);
+    _orderController.add(updatedOrder);
   }
 
-  /// variant
-  int _variantQuantity = 1;
-
-  void _onChangedVariant(value) {
-    setState(() {
-      _selectedVariant = value as Variant;
-      variantPrice = _selectedVariant!.price;
-      getDisplayedPrice();
-    });
+  void _onPressedPlusVariant(Order order) {
+    final updated = order.copyWith(quantity: order.quantity + 1);
+    _orderController.add(updated);
   }
 
-  void _onPressedPlusVariant() {
-    setState(() {
-      _variantQuantity += 1;
-      getDisplayedPrice();
-    });
+  void _onPressedMinusVariant(Order order) {
+    if (order.quantity <= 1) {
+      return;
+    }
+
+    final updated = order.copyWith(quantity: order.quantity - 1);
+    _orderController.add(updated);
   }
 
-  void _onPressedMinusVariant() {
-    if (_variantQuantity > 1) {
-      setState(() {
-        _variantQuantity -= 1;
-        getDisplayedPrice();
-      });
+  void _onAddModification(
+      Product product, Order order, OrderModification orderMod) {
+    final modGroup = product.findModificationGroup(orderMod.groupId);
+
+    if (modGroup == null) {
+      return;
+    }
+
+    if (modGroup.maximum == null ||
+        order.getGroupModificationCount(orderMod.groupId) < modGroup.maximum!) {
+      final updatedOrder = order.addModification(orderMod);
+      _orderController.add(updatedOrder);
+    } else {
+      showAlertDialog(context,
+          title: 'Error',
+          content:
+              Text('You can choose maximum of ${modGroup.maximum!} items'));
     }
   }
 
-  ///modification
-  //this is the default number on plus and minus button on modification
-  int _modificationQuantity = 1;
-  //this is supposed to be the variable to tract how much modification items
-  //user has selected, and if maxQuantity is not null, this number should be smaller
-  //than maxQuantity.
-  int selectedModificationItem = 0;
-
-  void _onChangedModification(
-      bool? value, Modification modification, int? maxQuantity) {
-    setState(
-      () {
-        modification.isSelected = !modification.isSelected;
-
-        if ((value == true) && (_modificationQuantity == 1)) {
-          // modification.isSelected = false;
-          modificationPrice = _modificationQuantity * modification.price;
-          getDisplayedPrice();
-        } else if (value == false) {
-          //in this case, user unchecked the modification box, we reset this to default
-          _modificationQuantity = 1;
-          //and we have to reset the price too
-          modificationPrice = 0;
-          getDisplayedPrice();
-        }
-      },
-    );
-    print('_selectedModificationItem: $selectedModificationItem');
-    print('_modificationQuantity: $_modificationQuantity');
-    print('totalprice: $totalPrice');
+  void _onRemoveModification(Order order, OrderModification orderMod) {
+    final updatedOrder = order.removeModification(orderMod);
+    _orderController.add(updatedOrder);
   }
 
-  void _onPressedPlusModification(Modification modification, int? maxQuantity) {
-    if (maxQuantity != null) {
-      if (_modificationQuantity < maxQuantity) {
-        setState(() {
-          _modificationQuantity += 1;
-          modificationPrice = _modificationQuantity * modification.price;
-          getDisplayedPrice();
-        });
-      } else {
-        showAlertDialog(context,
-            title: 'Error',
-            content: Text('You can choose maximum of $maxQuantity items'));
-      }
-    }
-    print('_modificationQuantity: $_modificationQuantity');
-    print('totalprice: $totalPrice');
-  }
-
-  void _onPressedMinusModification(Modification modification) {
-    if (_modificationQuantity > 1) {
-      setState(() {
-        _modificationQuantity -= 1;
-        modificationPrice = _modificationQuantity * modification.price;
-        getDisplayedPrice();
-      });
-    }
-    print('_modificationQuantity: $_modificationQuantity');
-    print('totalprice: $totalPrice');
+  void _onRemoveAllModifications(Order order, OrderModification orderMod) {
+    final updatedOrder = order.removeAllModifications(orderMod);
+    _orderController.add(updatedOrder);
   }
 
   //<--------UI---------------------------------->
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        elevation: 1.0,
-        backgroundColor: Colors.white,
-        leading: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: IconButton(
-            color: kGreyTextColor,
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.close),
+    return FutureBuilder<Product>(
+      future: productFromNetwork,
+      builder: (context, snapshot) {
+        late Widget body;
+        late String title;
+        if (snapshot.hasData) {
+          title = snapshot.data!.name;
+          body = _buildProductBody(snapshot.data!);
+        } else if (snapshot.hasError) {
+          title = "Error!";
+          body = _buildErrorWidget(snapshot.error!);
+        } else {
+          title = "Loading";
+          body = const CircularProgressIndicator(color: kPrimaryColor);
+        }
+
+        return Scaffold(
+          appBar: AppBar(
+            elevation: 1.0,
+            backgroundColor: Colors.white,
+            leading: Padding(
+              padding: const EdgeInsets.all(12.0),
+              child: IconButton(
+                color: kGreyTextColor,
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close),
+              ),
+            ),
+            title: Text(
+              title,
+              style: const TextStyle(color: kMainTextColor),
+            ),
           ),
-        ),
-        title: Text(
-          product.name,
-          style: const TextStyle(color: kMainTextColor),
-        ),
-      ),
-      body: _buildProductBody(),
+          body: body,
+        );
+      },
     );
   }
 
-  Widget _buildProductBody() {
-    return _isLoading
-        ? const CircularProgressIndicator(color: kPrimaryColor)
-        : _hasError
-            ? buildErrorWidget()
-            : Stack(
-                alignment: AlignmentDirectional.bottomCenter,
-                children: [
-                  SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (product.variants.length > 1)
-                          Container(
-                            color: kLightGrey,
-                            child: const Padding(
-                              padding: EdgeInsets.only(
-                                  left: 20, top: 10.0, bottom: 10),
-                              child: Text("Choose One ",
-                                  style: kHeaderTextStyle,
-                                  textAlign: TextAlign.left),
-                            ),
+  Widget _buildProductBody(Product product) {
+    return StreamBuilder<Order>(
+        stream: _orderController.stream,
+        builder: (context, snapshot) {
+          final order = snapshot.data;
+          if (order == null) {
+            return SizedBox();
+          }
+
+          return Stack(
+            alignment: AlignmentDirectional.bottomCenter,
+            children: [
+              SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (product.variants.length > 1)
+                      Container(
+                        color: kLightGrey,
+                        child: const Padding(
+                          padding:
+                              EdgeInsets.only(left: 20, top: 10.0, bottom: 10),
+                          child: Text("Choose One ",
+                              style: kHeaderTextStyle,
+                              textAlign: TextAlign.left),
+                        ),
+                      ),
+                    if (product.variants.length > 1)
+                      ...product.variants.map(
+                        (variant) => VariantListTile(
+                          variant: variant,
+                          selectedVariantId: order.orderProduct?.variantId,
+                          onChanged: (variantId) =>
+                              _onChangedVariant(order, variantId),
+                        ),
+                      ),
+                    ..._sortedModificationGroup(product)
+                        .map(
+                          (modificationGroup) => ModificationListTile(
+                            modificationGroup: modificationGroup,
+                            getQuantityInOrder: order.getModificationCount,
+                            onAddModification: (mod) =>
+                                _onAddModification(product, order, mod),
+                            onRemoveModification: (mod) =>
+                                _onRemoveModification(order, mod),
+                            onRemoveAllModifications: (mod) =>
+                                _onRemoveAllModifications(order, mod),
                           ),
-                        if (product.variants.length > 1)
-                          ...product.variants.map(
-                            (variant) => VariantListTile(
-                              variant: variant,
-                              groupValue: _selectedVariant,
-                              onChanged: _onChangedVariant,
-                            ),
-                          ),
-                        if (product.modificationGroups != null)
-                          ...product.modificationGroups!
-                              .map(
-                                (modificationGroup) => ModificationListTile(
-                                  modificationGroup: modificationGroup,
-                                  onPressedMinusModification:
-                                      _onPressedMinusModification,
-                                  onChangedModification: _onChangedModification,
-                                  modificationQuantity: _modificationQuantity,
-                                  onPressedPlusModification:
-                                      _onPressedPlusModification,
-                                ),
-                              )
-                              .toList(),
-                        buildQuantityButtons(),
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
-                  buildStackedButton(),
-                  buildStackedBottom()
-                ],
-              );
+                        )
+                        .toList(),
+                    buildQuantityButtons(order),
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+              buildStackedButton(calculateOrderPrice(product, order)),
+              buildStackedBottom()
+            ],
+          );
+        });
   }
 
-  Container buildQuantityButtons() {
+  Container buildQuantityButtons(Order order) {
     return Container(
       color: kLightGrey,
       child: Column(
@@ -254,9 +224,9 @@ class _ProductPageState extends State<ProductPage> {
                 style: kHeaderTextStyle, textAlign: TextAlign.left),
           ),
           QuantityRow(
-            variantQuantity: _variantQuantity,
-            onPressedPlus: _onPressedPlusVariant,
-            onPressedMinus: _onPressedMinusVariant,
+            variantQuantity: order.quantity,
+            onPressedPlus: () => _onPressedPlusVariant(order),
+            onPressedMinus: () => _onPressedMinusVariant(order),
           ),
           const SizedBox(height: 10),
         ],
@@ -264,7 +234,7 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  Padding buildStackedButton() {
+  Padding buildStackedButton(int price) {
     return Padding(
       padding: const EdgeInsets.only(
           left: kPadding20, right: kPadding20, bottom: 30),
@@ -285,7 +255,7 @@ class _ProductPageState extends State<ProductPage> {
                   style: const TextStyle(color: Colors.white, fontSize: 18),
                 ),
                 const Spacer(),
-                Text('\$$displayedPrice',
+                Text('${currency(price)}',
                     style: const TextStyle(color: Colors.white, fontSize: 18))
               ],
             ),
@@ -302,11 +272,11 @@ class _ProductPageState extends State<ProductPage> {
     );
   }
 
-  Center buildErrorWidget() {
+  Center _buildErrorWidget(Object error) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(8.0),
-        child: const Text('EmptyOrErrorContent.error_message',
+        child: Text(error.toString(),
             style: TextStyle(
               color: Colors.grey,
               fontSize: 16,
