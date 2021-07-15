@@ -15,13 +15,15 @@ class ModificationListTile extends StatelessWidget {
     required this.onPressedMinusModification,
   }) : super(key: key);
   final ModificationGroup modificationGroup;
-  final void Function(bool?, Modification modification, int? maxQuantity)
+  final void Function(
+          bool?, Modification modification, int? maxQuantity, int index)
       onChangedModification;
 
   final int modificationQuantity;
-  final Function(Modification modification, int? maxQuantity)
+  final Function(Modification modification, int? maxQuantity, int index)
       onPressedPlusModification;
-  final Function(Modification modification) onPressedMinusModification;
+  final Function(Modification modification, int index)
+      onPressedMinusModification;
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,17 @@ class ModificationListTile extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         buildTitle(),
-        ...modificationGroup.modifications.map((modification) {
+        buildList(),
+      ],
+    );
+  }
+
+  Widget buildList() {
+    return ListView.builder(
+        shrinkWrap: true,
+        itemCount: modificationGroup.modifications.length,
+        itemBuilder: (context, index) {
+          final modification = modificationGroup.modifications[index];
           return Column(
             children: [
               ListTile(
@@ -46,24 +58,22 @@ class ModificationListTile extends StatelessWidget {
                     ? ModificationQuantityRow(
                         quantity: modificationQuantity,
                         onPressedPlus: () => onPressedPlusModification(
-                            modification, modificationGroup.maximum),
+                            modification, modificationGroup.maximum, index),
                         onPressedMinus: () =>
-                            onPressedMinusModification(modification),
+                            onPressedMinusModification(modification, index),
                       )
                     : const SizedBox(),
                 trailing: Checkbox(
                   value: modification.isSelected,
                   activeColor: kPrimaryColor,
                   onChanged: (value) => onChangedModification(
-                      value, modification, modificationGroup.maximum),
+                      value, modification, modificationGroup.maximum, index),
                 ),
               ),
               const Divider(height: 1),
             ],
           );
-        }).toList(),
-      ],
-    );
+        });
   }
 
   Container buildTitle() {

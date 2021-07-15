@@ -109,7 +109,7 @@ class _ProductPageState extends State<ProductPage> {
   int selectedModificationItem = 0;
 
   void _onChangedModification(
-      bool? value, Modification modification, int? maxQuantity) {
+      bool? value, Modification modification, int? maxQuantity, int index) {
     setState(
       () {
         modification.isSelected = !modification.isSelected;
@@ -132,7 +132,7 @@ class _ProductPageState extends State<ProductPage> {
     print('totalprice: $totalPrice');
   }
 
-  void _onPressedPlusModification(Modification modification, int? maxQuantity) {
+  void _onPressedPlusModification(Modification modification, int? maxQuantity, int index) {
     if (maxQuantity != null) {
       if (_modificationQuantity < maxQuantity) {
         setState(() {
@@ -150,7 +150,9 @@ class _ProductPageState extends State<ProductPage> {
     print('totalprice: $totalPrice');
   }
 
-  void _onPressedMinusModification(Modification modification) {
+  void _onPressedMinusModification(
+    Modification modification, int index
+  ) {
     if (_modificationQuantity > 1) {
       setState(() {
         _modificationQuantity -= 1;
